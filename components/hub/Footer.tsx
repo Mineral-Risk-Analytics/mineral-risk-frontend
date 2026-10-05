@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export function Footer() {
   return (
@@ -34,7 +35,7 @@ export function Footer() {
           </div>
           <div>
             <div className="ih-footer-h">About</div>
-            <a href="#">Methodology</a>
+            <Link href="/intelligence/methodology">Methodology</Link>
             <a href="#">Contact</a>
             <a href="#">Subscribe</a>
           </div>

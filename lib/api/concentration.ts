@@ -44,6 +44,11 @@ export interface GeoResult {
 }
 
 export interface Producer {
+  /** Stage this row belongs to (2026-08-05): detail producers are per-stage
+   *  snapshots — shares are within-stage fractions and must never be summed
+   *  across stages. Null on overview top_production rows (single-stream
+   *  material_production_shares). */
+  stage: string | null;
   country_code: string;
   production_share: number;
   production_volume: number | null;

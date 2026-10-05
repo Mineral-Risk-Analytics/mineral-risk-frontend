@@ -2,12 +2,18 @@
 
 /**
  * Public company profile — /intelligence/companies/[slug].
- * Informative-first launch (2026-07-15): identity, supply chain, and
- * facility exposure only. Hidden until later phases: risk bands/scores,
- * linked intelligence (posts/events), methodology links, subscribe.
+ *
+ * Header comment refreshed 2026-09-24 — the 2026-07-15 "informative-first"
+ * note had drifted from reality. What the page ACTUALLY shows today:
+ * identity, supply chain, material-level global + per-location scores
+ * (added 2026-07-21/22), facility drawer, linked posts (restored
+ * 2026-07-22), subscribe, and a methodology link (wired 2026-09-24).
+ * Still hidden: the company-level band (`company.band` is fetched but not
+ * rendered) and linked events (Phase-5 flag).
  * The lede renders companies.public_intro and is omitted when unset.
  */
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Nav } from '@/components/hub/Nav'
@@ -122,8 +128,9 @@ export default function CompanyProfilePage() {
                                 Coverage is company-agnostic and regulatory-led. Scores reflect supply-chain exposure,
                                 not investment guidance.
                             </p>
-                            {/* TODO: point at a methodology page once one exists. */}
-                            <span className='ih-aside-link'>Methodology →</span>
+                            <Link href='/intelligence/methodology' className='ih-aside-link'>
+                                Methodology →
+                            </Link>
                         </div>
 
                         <SubscribeBox className='ih-aside-subscribe' />

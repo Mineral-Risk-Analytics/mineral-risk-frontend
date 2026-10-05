@@ -14,7 +14,7 @@ import { FacilityDrawer } from "./FacilityDrawer";
 const LEVEL_LABEL: Record<string, string> = {
   crit: "Crit",
   high: "High",
-  med: "Med",
+  med: "Mod",  // 2026-09-24: matches dashboard + methodology vocabulary
   low: "Low",
 };
 

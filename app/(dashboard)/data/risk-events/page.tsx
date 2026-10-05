@@ -98,6 +98,26 @@ const DIRECTION_OPTIONS = [
   { value: "neutral", label: "Neutral" },
 ];
 
+/** Canonical `sources.name` values (each ingester's _SOURCE_NAME + the
+ *  manual loader's). Seeds the source facet so every source is selectable
+ *  from page one; the dynamic merge still widens it if a new source
+ *  appears in loaded rows. Keep in sync with the engine's ingesters. */
+const KNOWN_SOURCES = [
+  "EUR-Lex",
+  "Federal Register API",
+  "Global Trade Alert",
+  "IEA Critical Minerals Policy Tracker",
+  "OpenSanctions",
+  "Operational news watchlist",
+  "manual_walkthrough",
+];
+
+/** Display-name overrides for raw sources.name values that read poorly
+ *  as chips. Filter VALUES stay the raw names (backend exact match). */
+const SOURCE_FACET_LABELS: Record<string, string> = {
+  manual_walkthrough: "Manual workbook",
+};
+
 const DEFECT_OPTIONS = [
   { value: "truncated_summary", label: "Truncated summary" },
   { value: "future_date", label: "Future date" },
@@ -349,7 +369,13 @@ export default function RiskEventsTriagePage() {
 
   // Facet options accumulate across loads so a selected value never vanishes
   // from its own select while the filtered list omits it.
-  const [sourceOptions, setSourceOptions] = useState<string[]>([]);
+  // 2026-08-17 (Nicole): the source facet is SEEDED with the canonical
+  // sources.name values instead of starting empty — previously options
+  // accumulated only from loaded rows, so a source with no event on the
+  // current page (notably the manual workbook's ~200 events, deep in a
+  // 1,100+ queue) was unfindable from the filter. Values must match
+  // sources.name exactly; backend `?source=` is an exact match.
+  const [sourceOptions, setSourceOptions] = useState<string[]>(KNOWN_SOURCES);
   const [typeOptions, setTypeOptions] = useState<string[]>([]);
   const [materialOptions, setMaterialOptions] = useState<string[]>([]);
   /* code → display name. Accumulated like the other facets, but as a map:
@@ -719,7 +745,7 @@ export default function RiskEventsTriagePage() {
     <PageLayout>
       <PageHeader
         title="Risk Events"
-        subtitle="Triage queue. The ingest engine proposes a pillar and entity links; nothing scores until an analyst confirms, corrects, or dismisses it."
+        subtitle="Triage queue. The ingest engine proposes a pillar and entity links; an analyst confirms, corrects, or dismisses each event. Confirmed events feed the content feed and build the validation record that re-promotes the event pillars — the published score is concentration-only until those gates clear."
       />
 
       {/* Coverage sits beside the queue on purpose: "which materials are
@@ -852,7 +878,10 @@ export default function RiskEventsTriagePage() {
           width={140}
           value={filters.source}
           onChange={(v) => setFilter({ source: v })}
-          options={sourceOptions.map((s) => ({ value: s, label: s }))}
+          options={sourceOptions.map((s) => ({
+            value: s,
+            label: SOURCE_FACET_LABELS[s] ?? s,
+          }))}
         />
         <FacetSelect
           ariaLabel="Event type"

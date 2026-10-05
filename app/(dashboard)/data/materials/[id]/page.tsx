@@ -169,12 +169,19 @@ export default function MaterialDetailPage({
               )}
             </div>
           </div>
-          {globalScore?.overall_risk_score != null && (
+          {globalScore && (
             <div className="shrink-0 text-right">
               <div className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                Overall Risk
+                Structural Supply Risk
               </div>
-              <ScoreChip score={globalScore.overall_risk_score} showBandLabel />
+              {/* 5.0 cutover: overall == concentration pillar. A null
+                  overall now means the concentration pillar is unscored
+                  (insufficient data) — never fall through to a blank. */}
+              <ScoreChip
+                score={globalScore.overall_risk_score}
+                showBandLabel
+                insufficientData={globalScore.overall_risk_score == null}
+              />
             </div>
           )}
         </div>
@@ -528,6 +535,12 @@ const GLOBAL_PILLARS: {
   label: string;
   pillarClass: string;
   colorVar: string;
+  /** 5.0 concentration-first launch (2026-08-17): true = shadow-scored at
+   *  weight 0 — computed + displayed for the validation record, does NOT
+   *  move the published score. Rendered dimmed with an "in validation"
+   *  note. Flip back per pillar as the D0 re-promotion gates clear
+   *  (engine: MARKET_PILLAR_WEIGHTS). */
+  inValidation?: boolean;
 }[] = [
   {
     key: "material_concentration_score",
@@ -540,24 +553,28 @@ const GLOBAL_PILLARS: {
     label: "Geopolitical",
     pillarClass: "p-pillar-geo",
     colorVar: "var(--p-pillar-geo)",
+    inValidation: true,
   },
   {
     key: "regulatory_compliance_score",
     label: "Regulatory",
     pillarClass: "p-pillar-regulatory",
     colorVar: "var(--p-pillar-regulatory)",
+    inValidation: true,
   },
   {
     key: "operational_score",
     label: "Operational",
     pillarClass: "p-pillar-operational",
     colorVar: "var(--p-pillar-operational)",
+    inValidation: true,
   },
   {
     key: "financial_pressure_score",
     label: "Financial Pressure",
     pillarClass: "p-pillar-financial",
     colorVar: "var(--p-pillar-financial)",
+    inValidation: true,
   },
 ];
 
@@ -565,7 +582,7 @@ function GlobalScoreCard({ score, className }: GlobalScoreCardProps) {
   return (
     <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base">Global risk score</CardTitle>
+        <CardTitle className="text-base">Structural supply risk</CardTitle>
         <div className="text-xs text-muted-foreground">
           {score.trade_weighted_geo_count} geograph
           {score.trade_weighted_geo_count === 1 ? "y" : "ies"} weighted · as of{" "}
@@ -576,9 +593,12 @@ function GlobalScoreCard({ score, className }: GlobalScoreCardProps) {
         {/* Uses platform CSS: p-score-grid, p-score-cell, p-score-cell-label,
             p-score-cell-value, p-pillar-strip + p-pillar-* colour classes */}
         <div className="p-score-grid">
-          {/* Overall score — highlighted cell */}
+          {/* Published score — highlighted cell.  5.0: equals the
+              Material Concentration pillar exactly (concentration-first
+              launch); shown as its own cell so the equality is visible
+              rather than implied. */}
           <div className="p-score-cell overall">
-            <div className="p-score-cell-label">Overall</div>
+            <div className="p-score-cell-label">Structural Supply Risk</div>
             <div className="p-score-cell-value">
               {score.overall_risk_score != null
                 ? score.overall_risk_score.toFixed(1)
@@ -591,12 +611,27 @@ function GlobalScoreCard({ score, className }: GlobalScoreCardProps) {
             />
           </div>
 
-          {/* One cell per pillar */}
+          {/* One cell per pillar — shadow-scored pillars render dimmed */}
           {GLOBAL_PILLARS.map((p) => {
             const raw = score[p.key] as number | null | undefined;
             return (
-              <div key={p.key} className="p-score-cell">
-                <div className="p-score-cell-label">{p.label}</div>
+              <div
+                key={p.key}
+                className={`p-score-cell${p.inValidation ? " opacity-55" : ""}`}
+                title={
+                  p.inValidation
+                    ? "Signal in validation — computed and recorded, weight 0 in the published score until it clears the re-promotion quality gates."
+                    : undefined
+                }
+              >
+                <div className="p-score-cell-label">
+                  {p.label}
+                  {p.inValidation && (
+                    <span className="ml-1 align-middle text-[9px] font-normal uppercase tracking-wide text-muted-foreground">
+                      · validating
+                    </span>
+                  )}
+                </div>
                 <div className="p-score-cell-value">
                   {raw != null ? Math.round(raw) : "—"}
                 </div>
@@ -605,6 +640,13 @@ function GlobalScoreCard({ score, className }: GlobalScoreCardProps) {
             );
           })}
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          The published score is the Material Concentration pillar
+          (structural supply risk). Geopolitical, Regulatory, Operational
+          and Financial are signals in validation — shadow-scored at weight
+          0 while the triaged event baseline accumulates; they re-enter the
+          published score per pillar once the quality gates are met.
+        </p>
       </CardContent>
     </Card>
   );
@@ -705,9 +747,12 @@ function ScoresTab({ materialId, scores }: ScoresTabProps) {
   }
 
   const cappedLimit = Math.min(COUNTRY_SCORES_DEFAULT_LIMIT, sortedData.length);
+  // 5.0 note appended: the per-country pillar columns (Geopolitical /
+  // Regulatory / Operational) are shadow-scored signals in validation —
+  // they do not feed the published score.
   const subtitle = showAllCountries
-    ? `Showing all ${sortedData.length} scored countries · sorted by weighted exposure (share × overall risk) · click a row to drill in`
-    : `Showing top ${cappedLimit} of ${sortedData.length} by weighted exposure (share × overall risk) · click a row to drill in · toggle below to show all`;
+    ? `Showing all ${sortedData.length} scored countries · sorted by weighted exposure (share × overall risk) · click a row to drill in · event-pillar columns are signals in validation (weight 0)`
+    : `Showing top ${cappedLimit} of ${sortedData.length} by weighted exposure (share × overall risk) · click a row to drill in · toggle below to show all · event-pillar columns are signals in validation (weight 0)`;
 
   return (
     <PlatformCard>

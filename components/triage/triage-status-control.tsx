@@ -4,7 +4,11 @@
  * The triage decision: the three terminal states an event can be moved to
  * from `pending_triage`, plus the reverse move back to the queue.
  *
- *   scoring       — confirmed; feeds scoring and every display surface
+ *   scoring       — confirmed; feeds every display surface and the shadow
+ *                   event pillars (5.0 concentration-first launch: those
+ *                   pillars are weight 0 in the published score until the
+ *                   re-promotion gates clear — confirming builds the
+ *                   validation record, it does not move published numbers)
  *   display_only  — industry-relevant and viewable, but attributed to no
  *                   material or pillar for scoring
  *   rejected      — soft dismiss; row retained so dedupe cannot resurrect it
@@ -34,7 +38,7 @@ const OUTCOMES: Outcome[] = [
     color: "var(--p-risk-low)",
     fill: "var(--p-risk-low-soft)",
     ink: "#065F46",
-    title: "Confirm for scoring — feeds pillar scores and the content feed",
+    title: "Confirm — feeds the content feed and the validation record (event pillars are shadow-scored until re-promotion)",
   },
   {
     value: "display_only",

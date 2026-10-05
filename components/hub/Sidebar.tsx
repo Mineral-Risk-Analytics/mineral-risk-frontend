@@ -5,8 +5,10 @@
  * replacing the design-phase mock values.
  *
  * Data: GET /intelligence/risk-summary — latest L2 global rollup per
- * material (the SAME numbers as the platform materials page), banded by
- * the shared 25/45/60/insufficient-data rules server-side.
+ * material (the SAME numbers as the platform materials page), banded
+ * server-side by the shared bands.py cuts (mirrored in
+ * lib/utils/risk-band.ts — 35/60/90 + insufficient-data gate as of the
+ * 2026-08-11 concentration-launch recalibration).
  *
  * Display (curated full-spectrum, decided 2026-07-21 — replaced the
  * brief top-N hybrid the same day): a fixed list of battery-chain
@@ -20,13 +22,18 @@
  * Order still follows the API (score DESC), so band cut changes or
  * rescores reorder the list automatically; unknown names are skipped.
  *
- * Pillar counts below remain mock until the per-pillar count endpoint
- * exists; the subscribe form is not yet wired to a backend.
+ * 2026-09-24 (concentration-first launch polish): the mock "Browse by
+ * pillar" block is GONE — replaced by "Ratings at a glance", band counts
+ * computed from the SAME risk-summary payload as the bars (all rated
+ * materials, not just the curated display list). Live, zero extra
+ * requests, and no pillar taxonomy on the public sidebar while the
+ * published score is concentration-only. Heading renamed to the public
+ * label ("Structural supply risk", C1) and the block now links to
+ * /intelligence/methodology.
  */
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { PillarStat } from './types'
-import { PILLARS as PILLAR_SOURCE } from './pillars'
 import { SubscribeBox } from "./SubscribeBox";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
@@ -54,12 +61,25 @@ const DISPLAY_NAME: Record<string, string> = {
     'Platinum-Group Metals': 'PGMs'
 }
 
+// "Mod" (not "Med"): matches the dashboard's band vocabulary and the
+// methodology page's Low/Moderate/High/Critical (2026-09-24 consistency fix).
 const LEVEL_LABEL: Record<string, string> = {
     crit: 'Crit',
     high: 'High',
-    med: 'Med',
+    med: 'Mod',
     low: 'Low'
 }
+
+/** Full band names for the "Ratings at a glance" rows. */
+const BAND_NAME: Record<BandLevel, string> = {
+    crit: 'Critical',
+    high: 'High',
+    med: 'Moderate',
+    low: 'Low'
+}
+
+type BandLevel = 'crit' | 'high' | 'med' | 'low'
+const BAND_ORDER: BandLevel[] = ['crit', 'high', 'med', 'low']
 
 /** API shape — mirrors MaterialRiskBar / RiskSummary (app/schemas/intelligence.py). */
 interface ApiRiskBar {
@@ -106,16 +126,6 @@ function MatRow({ bar }: { bar: ApiRiskBar }) {
     )
 }
 
-// Colours/labels from the shared pillar source; counts remain mock until
-// the per-pillar content-count endpoint exists.
-const PILLARS: PillarStat[] = [
-    { name: PILLAR_SOURCE.regulatory_compliance.label, count: 14, color: PILLAR_SOURCE.regulatory_compliance.color },
-    { name: PILLAR_SOURCE.material_concentration.label, count: 12, color: PILLAR_SOURCE.material_concentration.color },
-    { name: PILLAR_SOURCE.geopolitical_trade.label, count: 9, color: PILLAR_SOURCE.geopolitical_trade.color },
-    { name: PILLAR_SOURCE.operational.label, count: 7, color: PILLAR_SOURCE.operational.color },
-    { name: PILLAR_SOURCE.financial_pressure.label, count: 5, color: PILLAR_SOURCE.financial_pressure.color }
-]
-
 export function Sidebar() {
     const [summary, setSummary] = useState<ApiRiskSummary | null>(null)
 
@@ -140,12 +150,26 @@ export function Sidebar() {
 
     const bars = (summary?.materials ?? []).filter((b) => SIDEBAR_MATERIALS.has(b.material_name))
 
+    // Band distribution across ALL rated materials in the payload (not the
+    // curated bar list) — a live "Ratings at a glance". Materials the
+    // insufficient-data gate excludes carry no countable level and are
+    // skipped, consistent with "absence of data is never low risk".
+    const bandCounts: Record<BandLevel, number> = { crit: 0, high: 0, med: 0, low: 0 }
+    let ratedTotal = 0
+    for (const m of summary?.materials ?? []) {
+        const level = m.band.level as BandLevel
+        if (level in bandCounts && m.band.score !== null) {
+            bandCounts[level] += 1
+            ratedTotal += 1
+        }
+    }
+
     return (
         <aside className='ih-sidebar'>
             {/* Material risk bars — hidden until live data arrives */}
             {bars.length > 0 ? (
                 <section className='ih-side-block'>
-                    <div className='ih-eyebrow'>Material risk</div>
+                    <div className='ih-eyebrow'>Structural supply risk</div>
 
                     <div className='ih-mat-list'>
                         {bars.map((b) => (
@@ -156,24 +180,32 @@ export function Sidebar() {
                     {summary?.as_of_date ? (
                         <div className='ih-mat-asof'>Scores as of {formatAsOf(summary.as_of_date)}</div>
                     ) : null}
+                    <Link href='/intelligence/methodology' className='ih-mat-asof'>
+                        How these ratings work →
+                    </Link>
                 </section>
             ) : null}
 
-            {/* Browse by pillar */}
-            <section className='ih-side-block'>
-                <div className='ih-eyebrow'>Browse by pillar</div>
-                <div className='ih-pillars'>
-                    {PILLARS.map((p) => (
-                        <button key={p.name} className='ih-pillar-btn' style={{ color: p.color }}>
-                            <span className='ih-pillar-l'>
-                                <span className='ih-pillar-dot' style={{ background: p.color }} />
-                                {p.name}
-                            </span>
-                            <span className='ih-pillar-n'>{p.count}</span>
-                        </button>
-                    ))}
-                </div>
-            </section>
+            {/* Ratings at a glance — band distribution, same live payload */}
+            {ratedTotal > 0 ? (
+                <section className='ih-side-block'>
+                    <div className='ih-eyebrow'>Ratings at a glance</div>
+                    <div className='ih-pillars'>
+                        {BAND_ORDER.map((level) => (
+                            <div key={level} className='ih-pillar-btn'>
+                                <span className='ih-pillar-l'>
+                                    <span className={`ih-pillar-dot ih-mat-fill ih-mat-${level}`} />
+                                    {BAND_NAME[level]}
+                                </span>
+                                <span className={`ih-pillar-n ih-mat-level-${level}`}>
+                                    {bandCounts[level]}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className='ih-mat-asof'>{ratedTotal} rated materials</div>
+                </section>
+            ) : null}
 
             {/* Subscribe */}
             <SubscribeBox className='ih-side-block' />

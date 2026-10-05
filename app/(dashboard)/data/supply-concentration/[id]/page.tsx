@@ -34,9 +34,44 @@ import { GovernanceStep } from '@/components/concentration/governance-step'
 import { Notice } from '@/components/concentration/notice'
 import { useConcentrationDetail } from '@/lib/hooks/use-concentration'
 import { humanize } from '@/lib/utils/format'
-import type { CapacityRow, StageDetail } from '@/lib/api/concentration'
+import type { CapacityRow, Producer, StageDetail } from '@/lib/api/concentration'
 
 const fmtVolume = (v: number | null | undefined) => (v == null ? '—' : new Intl.NumberFormat('en-US').format(v))
+
+/** Compact unit labels for the in-cell volume line (2026-08-05) — the full
+ *  USGS unit string stays in the cell tooltip; unknown units pass through. */
+const compactUnit = (u: string | null | undefined) => {
+    if (!u) return ''
+    const low = u.toLowerCase()
+    if (low === 'thousand metric tons') return 'kt'
+    if (low === 'metric tons') return 't'
+    if (low === 'kilograms') return 'kg'
+    return u
+}
+
+/**
+ * Display names for DB source strings (2026-08-10). Benchmark-workbook rows
+ * store `benchmark_<slug(source_org)>` truncated to 32 chars, so title-casing
+ * the raw slug produced labels like "Benchmark Iea Global Critical Mi".
+ * Slugs below were computed with the loader's own _slug_source; unknown
+ * sources fall back to humanize so new workbook sources degrade readably.
+ */
+const SOURCE_LABELS: Record<string, string> = {
+    usgs_mcs: 'USGS MCS',
+    usgs_mcs_propagated: 'USGS MCS (propagated)',
+    benchmark_cobalt_institute_bench: 'Benchmark: Cobalt Institute',
+    benchmark_iea_global_critical_mi: 'Benchmark: IEA GCMO 2026',
+    benchmark_iea_critical_minerals: 'Benchmark: IEA Data Explorer',
+    benchmark_usgs_mineral_economics: 'Benchmark: USGS Mineral Economics',
+    benchmark_rare_earth_exchanges_2: 'Benchmark: Rare Earth Exchanges',
+    benchmark_mining_com_lynas_heavy: 'Benchmark: Mining.com (Lynas)',
+    benchmark_usgs_mineral_commodity: 'Benchmark: USGS MCS chapter'
+}
+
+const sourceLabel = (s: string | null | undefined) => {
+    if (!s) return '—'
+    return SOURCE_LABELS[s] ?? humanize(s)
+}
 
 export default function SupplyConcentrationDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -67,6 +102,39 @@ export default function SupplyConcentrationDetailPage({ params }: { params: Prom
         return [...map.entries()].map(
             ([k, v]) => [k, [...v].sort((a, b) => (b.capacity_share ?? 0) - (a.capacity_share ?? 0))] as const
         )
+    }, [data])
+
+    /**
+     * Producers pivoted country × stage (2026-08-05 redesign). One row per
+     * country, one column per stage with data — "CL: 23% of ore, absent from
+     * refined" is the story the old single-list table couldn't tell. Shares
+     * are within-stage fractions; stage columns are separate denominators
+     * and must never be summed against each other (same rule as capacity
+     * streams). Rows come from the SAME snapshots the engine scores, so
+     * this table cannot disagree with the stage table above it.
+     */
+    const producerMatrix = useMemo(() => {
+        const stages: string[] = []
+        const byCountry = new Map<string, Map<string, Producer>>()
+        for (const p of data?.producers ?? []) {
+            const stage = p.stage ?? 'unstaged'
+            if (!stages.includes(stage)) stages.push(stage)
+            if (!byCountry.has(p.country_code)) byCountry.set(p.country_code, new Map())
+            byCountry.get(p.country_code)!.set(stage, p)
+        }
+        const bindingStage = data?.driving_geo ? (data.per_geo[data.driving_geo]?.binding_stage ?? null) : null
+        // Binding-stage producers first (by that stage's share), then the
+        // rest by their best share at any stage — so the column that sets
+        // the score also leads the ordering.
+        const rank = (cc: string) => {
+            const m = byCountry.get(cc)
+            if (!m) return 0
+            const binding = bindingStage ? m.get(bindingStage) : undefined
+            if (binding) return 1 + binding.production_share
+            return Math.max(...[...m.values()].map((p) => p.production_share))
+        }
+        const countries = [...byCountry.keys()].sort((a, b) => rank(b) - rank(a))
+        return { stages, byCountry, countries, bindingStage }
     }, [data])
 
     const stageColumns = useMemo<ColumnDef<StageDetail, unknown>[]>(() => {
@@ -230,11 +298,7 @@ export default function SupplyConcentrationDetailPage({ params }: { params: Prom
                 meta: { align: 'right' },
                 cell: ({ row }) => (
                     <span className='whitespace-nowrap text-[10px] text-muted-foreground'>
-                        {row.original.source === 'usgs_mcs'
-                            ? 'USGS MCS'
-                            : row.original.source === 'benchmark'
-                              ? 'Benchmark'
-                              : humanize(row.original.source ?? '—')}
+                        {sourceLabel(row.original.source)}
                     </span>
                 )
             }
@@ -290,7 +354,7 @@ export default function SupplyConcentrationDetailPage({ params }: { params: Prom
                             <div className='mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
                                 {data.symbol && <span className='font-mono'>{data.symbol}</span>}
                                 <span>·</span>
-                                <span>{data.producers.length} producing countries</span>
+                                <span>{producerMatrix.countries.length} producing countries</span>
                                 <span>·</span>
                                 <span>
                                     {freshCount} fresh {freshCount === 1 ? 'stage' : 'stages'}
@@ -407,78 +471,125 @@ export default function SupplyConcentrationDetailPage({ params }: { params: Prom
                 </PlatformCard>
             )}
 
-            {/* Producers */}
+            {/* Producers — country × stage matrix (2026-08-05 redesign) */}
             <PlatformCard>
                 <PlatformCardHeader
                     title='Producers'
-                    subtitle={`All ${data.producers.length} countries with published production · capacity is compared per stream below, not here — the denominators differ`}
-                    actions={
-                        data.unit ? <span className='text-[10.5px] text-muted-foreground'>{data.unit}</span> : undefined
-                    }
+                    subtitle={`${producerMatrix.countries.length} countries × ${producerMatrix.stages.length} stages · producing refined material is still being a producer — every stage with published data gets a column · shares are within-stage fractions with separate denominators; never sum across columns`}
                 />
                 <PlatformCardBody noPadding>
                     <PlatformTable
                         embedded
-                        data={data.producers}
+                        data={producerMatrix.countries}
                         columns={[
                             {
                                 id: 'country',
                                 header: 'Country',
                                 cell: ({ row }) => (
                                     <CountrySharePill
-                                        code={row.original.country_code}
-                                        name={data.country_names[row.original.country_code]}
+                                        code={row.original}
+                                        name={data.country_names[row.original]}
                                     />
                                 )
                             },
-                            {
-                                id: 'share',
-                                header: 'Production share',
-                                cell: ({ row }) => {
-                                    const s = row.original.production_share
-                                    return (
-                                        <div className='flex w-[200px] items-center gap-2'>
-                                            <span
-                                                className={
-                                                    'min-w-[46px] font-mono text-[13px] tabular-nums ' +
-                                                    (s >= 0.1 ? 'font-semibold' : '')
-                                                }
-                                            >
-                                                {(s * 100).toFixed(1)}%
-                                            </span>
-                                            <span className='h-1.5 flex-1 overflow-hidden rounded-sm bg-muted'>
-                                                <span
-                                                    className={
-                                                        'block h-full rounded-sm ' +
-                                                        (s >= 0.5
-                                                            ? 'bg-red-500'
-                                                            : s >= 0.2
-                                                              ? 'bg-orange-500'
-                                                              : 'bg-slate-400')
-                                                    }
-                                                    style={{ width: `${s * 100}%` }}
+                            ...producerMatrix.stages.map((stage): ColumnDef<string, unknown> => {
+                                const meta = data.stages.find((s) => s.stage === stage)
+                                const binding = producerMatrix.bindingStage === stage
+                                return {
+                                    id: `stage-${stage}`,
+                                    // Each stage is a single-vintage snapshot, so the
+                                    // year/freshness live in the COLUMN header, not on
+                                    // rows — source and tonnage sit in the cell tooltip.
+                                    header: () => (
+                                        <span className='inline-flex items-center gap-1.5 normal-case'>
+                                            {binding && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <ChevronRight size={12} className='shrink-0 text-primary' />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side='top' className='max-w-[260px]'>
+                                                        Binding stage for the driving geography — this column sets
+                                                        the headline score
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )}
+                                            <SupplyChainStageBadge stage={stage as SupplyChainStage} />
+                                            {meta && (
+                                                <FreshnessBadge
+                                                    referenceYear={meta.reference_year}
+                                                    asOfYear={asOfYear}
+                                                    freshnessYears={data.freshness_years}
+                                                    compact
                                                 />
-                                            </span>
-                                        </div>
-                                    )
+                                            )}
+                                        </span>
+                                    ),
+                                    cell: ({ row }) => {
+                                        const p = producerMatrix.byCountry.get(row.original)?.get(stage)
+                                        if (!p) {
+                                            // Absence is information: this country publishes
+                                            // no production at this stage.
+                                            return <span className='text-xs text-muted-foreground/50'>—</span>
+                                        }
+                                        const s = p.production_share
+                                        return (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className='flex w-[150px] cursor-help flex-col gap-0.5'>
+                                                        <div className='flex items-center gap-2'>
+                                                            <span
+                                                                className={
+                                                                    'min-w-[46px] font-mono text-[13px] tabular-nums ' +
+                                                                    (s >= 0.1 ? 'font-semibold' : '')
+                                                                }
+                                                            >
+                                                                {(s * 100).toFixed(1)}%
+                                                            </span>
+                                                            <span className='h-1.5 flex-1 overflow-hidden rounded-sm bg-muted'>
+                                                                <span
+                                                                    className={
+                                                                        'block h-full rounded-sm ' +
+                                                                        (s >= 0.5
+                                                                            ? 'bg-red-500'
+                                                                            : s >= 0.2
+                                                                              ? 'bg-orange-500'
+                                                                              : 'bg-slate-400')
+                                                                    }
+                                                                    style={{ width: `${s * 100}%` }}
+                                                                />
+                                                            </span>
+                                                        </div>
+                                                        {/* Raw tonnage, scannable without hover — the auditable
+                                                            fact (the copper defect was caught by reading volumes
+                                                            against the MCS PDF). Absent on share-only sources. */}
+                                                        {p.production_volume != null && (
+                                                            <span className='truncate font-mono text-[10px] tabular-nums text-muted-foreground'>
+                                                                {fmtVolume(p.production_volume)}{' '}
+                                                                {compactUnit(p.unit_of_measure)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent side='top' className='max-w-[260px]'>
+                                                    {p.production_volume != null
+                                                        ? `${fmtVolume(p.production_volume)} ${p.unit_of_measure ?? ''}`.trim()
+                                                        : 'Share-only source — no published tonnage'}
+                                                    {' · '}
+                                                    {sourceLabel(p.source)}
+                                                    {' · '}
+                                                    {p.reference_year}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        )
+                                    }
                                 }
-                            },
-                            {
-                                id: 'volume',
-                                header: 'Volume',
-                                meta: { align: 'right' },
-                                cell: ({ row }) => (
-                                    <span className='font-mono text-xs tabular-nums'>
-                                        {fmtVolume(row.original.production_volume)}
-                                    </span>
-                                )
-                            },
+                            }),
                             {
                                 id: 'pillar',
                                 header: 'Pillar score',
                                 meta: { align: 'right' },
                                 cell: ({ row }) => {
-                                    const gr = data.per_geo[row.original.country_code]
+                                    const gr = data.per_geo[row.original]
                                     if (!gr || !gr.binding_stage) {
                                         return (
                                             <Tooltip>
@@ -511,31 +622,6 @@ export default function SupplyConcentrationDetailPage({ params }: { params: Prom
                                         </span>
                                     )
                                 }
-                            },
-                            {
-                                id: 'snapshot',
-                                header: 'Snapshot',
-                                meta: { align: 'right' },
-                                cell: ({ row }) => (
-                                    <FreshnessBadge
-                                        referenceYear={row.original.reference_year}
-                                        asOfYear={asOfYear}
-                                        freshnessYears={data.freshness_years}
-                                        compact
-                                    />
-                                )
-                            },
-                            {
-                                id: 'source',
-                                header: 'Source',
-                                meta: { align: 'right' },
-                                cell: ({ row }) => (
-                                    <span className='whitespace-nowrap text-[10px] text-muted-foreground'>
-                                        {row.original.source === 'usgs_mcs'
-                                            ? 'USGS MCS'
-                                            : humanize(row.original.source ?? '—')}
-                                    </span>
-                                )
                             }
                         ]}
                     />
@@ -567,7 +653,19 @@ export default function SupplyConcentrationDetailPage({ params }: { params: Prom
                                         </span>
                                     </div>
                                     {rows.map((c) => {
-                                        const prod = data.producers.find((p) => p.country_code === c.country_code)
+                                        // Pair capacity against the refined-stage share when one
+                                        // exists (every MCS capacity stream today is a refined-
+                                        // type stream: smelter, sponge, pigment), else the
+                                        // country's best stage share. Pre-2026-08-05 this used
+                                        // the flat producers list, whose rows summed stages.
+                                        const stageMap = producerMatrix.byCountry.get(c.country_code)
+                                        const prod =
+                                            stageMap?.get('refined') ??
+                                            (stageMap && stageMap.size > 0
+                                                ? [...stageMap.values()].reduce((a, b) =>
+                                                      b.production_share > a.production_share ? b : a
+                                                  )
+                                                : undefined)
                                         return (
                                             <div key={c.country_code} className='flex items-center gap-2.5'>
                                                 <span className='w-[86px] shrink-0'>

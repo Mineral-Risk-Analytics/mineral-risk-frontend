@@ -371,8 +371,10 @@ function GateRow({ verified }: { verified: boolean }) {
       <p className="leading-relaxed">
         {verified ? (
           <>
-            <span className="font-medium">Verified</span> — feeds scoring.
-            All scoring queries filter on{" "}
+            <span className="font-medium">Verified</span> — feeds the
+            regulatory pillar (a signal in validation: shadow-scored at
+            weight 0 in the published score until re-promotion). All scoring
+            queries filter on{" "}
             <code className="font-mono">verified=True</code>.
           </>
         ) : (

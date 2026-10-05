@@ -18,7 +18,7 @@ import {
 } from "@/lib/api/entities";
 
 const LEVEL_LABEL: Record<string, string> = {
-  crit: "Crit", high: "High", med: "Med", low: "Low",
+  crit: "Crit", high: "High", med: "Mod", low: "Low",  // Mod not Med (2026-09-24)
 };
 
 function FacilityCard({ f }: { f: FacilityDetailOut }) {

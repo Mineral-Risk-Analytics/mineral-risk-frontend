@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Nav } from "@/components/hub/Nav";
 import { CompanyListRow } from "@/components/hub/entity/CompanyListRow";
+import { SkeletonListRows } from "@/components/hub/Skeleton";
 import { Footer } from "@/components/hub/Footer";
 import { listPublicCompanies, type PublicCompanyListItem } from "@/lib/api/entities";
 
@@ -78,7 +79,7 @@ export default function CompaniesPage() {
         </div>
 
         {loading ? (
-          <div className="ih-browse-meta">Loading…</div>
+          <SkeletonListRows rows={6} />
         ) : error ? (
           <div className="ih-browse-meta">Couldn&apos;t load companies — try again shortly.</div>
         ) : (

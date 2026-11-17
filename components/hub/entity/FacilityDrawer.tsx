@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/hub/Skeleton";
 import { SideSheet, SideSheetContent } from "@/components/ui/side-sheet";
 import { DialogTitle } from "@/components/ui/dialog";
 import {
@@ -106,7 +107,11 @@ export function FacilityDrawer({
           {error ? (
             <p className="ih-fd-note">Couldn’t load facilities — please try again.</p>
           ) : data === null ? (
-            <p className="ih-fd-note">Loading…</p>
+            <div aria-busy style={{ display: "flex", flexDirection: "column", gap: 10, padding: "6px 0" }}>
+              <Skeleton w="82%" h={13} />
+              <Skeleton w="64%" h={13} />
+              <Skeleton w="73%" h={13} />
+            </div>
           ) : facs.length === 0 ? (
             <p className="ih-fd-note">No tracked facilities in {country}.</p>
           ) : (

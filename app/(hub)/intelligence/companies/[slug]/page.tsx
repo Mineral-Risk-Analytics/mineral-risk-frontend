@@ -22,7 +22,8 @@ import { EntityHeader } from '@/components/hub/entity/EntityHeader'
 import { Section } from '@/components/hub/entity/Section'
 import { ExposureRow } from '@/components/hub/entity/ExposureRow'
 import { GeoRow } from '@/components/hub/entity/GeoRow'
-import { LinkedPostsSection } from '@/components/hub/entity/LinkedPosts'
+import { LinkedEventsSection, LinkedPostsSection } from '@/components/hub/entity/LinkedPosts'
+import { SkeletonProfile } from '@/components/hub/Skeleton'
 import { SubscribeBox } from '@/components/hub/SubscribeBox'
 import { IntroBlocks } from '@/components/hub/entity/IntroBlocks'
 import { Footer } from '@/components/hub/Footer'
@@ -48,13 +49,15 @@ export default function CompanyProfilePage() {
             <div className='ih-page'>
                 <Nav section='companies' />
                 <main className='ih-entity-main'>
-                    <div className='ih-browse-meta'>
-                        {state === 'loading'
-                            ? 'Loading…'
-                            : state === 'missing'
-                              ? 'Company not found.'
-                              : "Couldn't load this company — try again shortly."}
-                    </div>
+                    {state === 'loading' ? (
+                        <SkeletonProfile />
+                    ) : (
+                        <div className='ih-browse-meta'>
+                            {state === 'missing'
+                                ? 'Company not found.'
+                                : "Couldn't load this company — try again shortly."}
+                        </div>
+                    )}
                 </main>
                 <Footer />
             </div>
@@ -138,6 +141,7 @@ export default function CompanyProfilePage() {
                 </div>
 
                 <LinkedPostsSection posts={company.linked_posts} />
+                <LinkedEventsSection events={company.linked_events} />
             </main>
             <Footer />
         </div>

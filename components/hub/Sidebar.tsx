@@ -33,6 +33,7 @@
  */
 
 import Link from 'next/link'
+import { materialSlug } from '@/lib/api/entities'
 import { useEffect, useState } from 'react'
 import { SubscribeBox } from "./SubscribeBox";
 
@@ -110,9 +111,13 @@ function MatRow({ bar }: { bar: ApiRiskBar }) {
     const score = bar.band.score ?? 0
     return (
         <div className='ih-mat-row'>
-            <span className='ih-mat-name' title={bar.material_name}>
+            <Link
+                href={`/intelligence/materials/${materialSlug(bar.material_name)}`}
+                className='ih-mat-name ih-mat-name-link'
+                title={bar.material_name}
+            >
                 {DISPLAY_NAME[bar.material_name] ?? bar.material_name}
-            </span>
+            </Link>
             <div className='ih-mat-track'>
                 <div
                     className={`ih-mat-fill ih-mat-${bar.band.level}`}
@@ -180,7 +185,16 @@ export function Sidebar() {
                     {summary?.as_of_date ? (
                         <div className='ih-mat-asof'>Scores as of {formatAsOf(summary.as_of_date)}</div>
                     ) : null}
-                    <Link href='/intelligence/methodology' className='ih-mat-asof'>
+                    {/* ih-aside-link (terracotta, hover) so it reads as
+                        clickable — the muted as-of styling it previously
+                        borrowed made it look like a caption (Nicole,
+                        2026-10-06). Block display keeps it on its own line
+                        under the as-of date. */}
+                    <Link
+                        href='/intelligence/methodology'
+                        className='ih-aside-link'
+                        style={{ display: 'block', marginTop: 6, fontSize: 12 }}
+                    >
                         How these ratings work →
                     </Link>
                 </section>

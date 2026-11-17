@@ -44,6 +44,7 @@ import { QualityDefectChips } from "@/components/triage/quality-defect-chips";
 import { SeverityChip } from "@/components/triage/score-chips";
 import { MaterialCoverageCard } from "@/components/triage/material-coverage-card";
 import { QueueSummaryCard } from "@/components/triage/queue-summary-card";
+import { TriageStatsPanel } from "@/components/triage/triage-stats-panel";
 import { TriageStatusControl } from "@/components/triage/triage-status-control";
 import {
   acceptSuggestions,
@@ -790,6 +791,12 @@ export default function RiskEventsTriagePage() {
           />
         )}
       </div>
+
+      {/* Suggestion quality — the plan-§7 measurement surface, collapsed by
+          default. Sits between the maps above and the work surface below:
+          read it before a triage sprint and after suggester changes. Hidden
+          entirely until the endpoint responds, same rule as coverage. */}
+      <TriageStatsPanel />
 
       <DataTableToolbar
         actions={

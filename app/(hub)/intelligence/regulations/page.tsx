@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Nav } from "@/components/hub/Nav";
 import { RegulationListRow } from "@/components/hub/entity/RegulationListRow";
+import { SkeletonListRows } from "@/components/hub/Skeleton";
 import { Footer } from "@/components/hub/Footer";
 import { listPublicRegulations, type PublicRegulationListItem } from "@/lib/api/entities";
 
@@ -81,7 +82,7 @@ export default function RegulationsPage() {
         </div>
 
         {loading ? (
-          <div className="ih-browse-meta">Loading…</div>
+          <SkeletonListRows rows={6} />
         ) : error ? (
           <div className="ih-browse-meta">Couldn&apos;t load regulations — try again shortly.</div>
         ) : (

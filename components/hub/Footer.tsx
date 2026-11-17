@@ -21,6 +21,7 @@ export function Footer() {
         <div className="ih-footer-cols">
           <div>
             <div className="ih-footer-h">Intelligence</div>
+            <Link href="/intelligence/materials">Materials</Link>
             <a href="#">Analysis</a>
             <a href="#">Signals</a>
             <a href="#">Reports</a>

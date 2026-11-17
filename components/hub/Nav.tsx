@@ -19,10 +19,11 @@ import { TabLabel } from "./types";
 
 const TABS: TabLabel[] = ["All", "Analysis", "Signal", "Report", "News"];
 
-export type HubSection = "intelligence" | "companies" | "regulations";
+export type HubSection = "intelligence" | "materials" | "companies" | "regulations";
 
 const SECTION_LINKS: { section: HubSection; label: string; href: string }[] = [
   { section: "intelligence", label: "Intelligence", href: "/intelligence" },
+  { section: "materials",    label: "Materials",    href: "/intelligence/materials" },
   { section: "companies",    label: "Companies",    href: "/intelligence/companies" },
   { section: "regulations",  label: "Regulations",  href: "/intelligence/regulations" },
 ];

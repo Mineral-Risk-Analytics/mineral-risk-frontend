@@ -161,10 +161,49 @@ export interface TriageListParams {
   sort_dir?: "asc" | "desc";
 }
 
+/** Per-source human-decision outcomes — GET /triage/stats (plan §7). */
+export interface TriageSourceStats {
+  source: string;
+  pending: number;
+  machine_display_only: number;
+  human_decisions: number;
+  scoring: number;
+  display_only: number;
+  rejected: number;
+  category_confirmed: number;
+  category_corrected: number;
+  correction_rate: number | null;
+}
+
+/** Material-link suggestion quality per (source × match_reason). */
+export interface TriageLinkQualityStats {
+  source: string;
+  match_reason: string;
+  confirmed: number;
+  rejected: number;
+  untouched: number;
+  decided: number;
+  confirm_rate: number | null;
+}
+
+export interface TriageStats {
+  generated_at: string;
+  human_decisions_total: number;
+  /** Rates on fewer decisions than this get a small-sample caution. */
+  small_sample_threshold: number;
+  sources: TriageSourceStats[];
+  link_quality: TriageLinkQualityStats[];
+}
+
 const BASE = "/api/v1/triage";
 
 export async function getTriageSummary(client: ApiClient): Promise<TriageSummary> {
   const { data } = await client.get<TriageSummary>(`${BASE}/summary`);
+  return data;
+}
+
+export async function getTriageStats(client: ApiClient): Promise<TriageStats> {
+  const { data } = await client.get<TriageStats>(`${BASE}/stats`);
   return data;
 }
 

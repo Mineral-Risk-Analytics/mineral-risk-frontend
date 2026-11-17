@@ -25,10 +25,12 @@ import type { ApiClient } from "@/lib/api/client";
 import {
   getMaterialCoverage,
   getTriageEvents,
+  getTriageStats,
   getTriageSummary,
   type MaterialCoverage,
   type TriageEventList,
   type TriageListParams,
+  type TriageStats,
   type TriageSummary,
 } from "@/lib/api/triage";
 
@@ -47,6 +49,7 @@ export const triageQueryKeys = {
     [...triageQueryKeys.all, "events", params] as const,
   summary: () => [...triageQueryKeys.all, "summary"] as const,
   coverage: () => [...triageQueryKeys.all, "coverage"] as const,
+  stats: () => [...triageQueryKeys.all, "stats"] as const,
 };
 
 export function useTriageSummary(
@@ -72,6 +75,20 @@ export function useTriageEvents(
     // the job the old hand-rolled requestSeq guard existed to do.
     queryKey: triageQueryKeys.events(params),
     queryFn: () => getTriageEvents(client, params),
+    placeholderData: (prev) => prev,
+    ...options,
+  });
+}
+
+export function useTriageStats(
+  options?: Omit<UseQueryOptions<TriageStats>, "queryKey" | "queryFn">,
+) {
+  const client = useApiClient();
+  return useQuery<TriageStats>({
+    // Lives in the `triage` key family, so every triage mutation's
+    // invalidation refreshes the quality rates along with the queue.
+    queryKey: triageQueryKeys.stats(),
+    queryFn: () => getTriageStats(client),
     placeholderData: (prev) => prev,
     ...options,
   });

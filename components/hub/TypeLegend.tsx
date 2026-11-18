@@ -6,7 +6,7 @@ const CARDS = [
   },
   {
     type: "Signal",
-    desc: "Short-form alerts — a new event or data point worth flagging",
+    desc: "Short, dated developments — straight from our tracking engine, or flagged by our analysts",
     badgeClass: "ih-badge ih-badge-dark",
   },
   {

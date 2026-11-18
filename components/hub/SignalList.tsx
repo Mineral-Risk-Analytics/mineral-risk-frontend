@@ -5,10 +5,13 @@
  * One renderer for every signal surface: the News-tab stream, material
  * profiles, and article "Related signals". Events are DATA, visually
  * distinct from editorial feed rows: date + source attribution + title +
- * material links, with a quiet "Confirmed" tick on human-verified rows
- * (C1 vocabulary: these are live signals beside the structural rating,
- * not components of it). No numeric severity anywhere — public scope is
- * bands and dates (A6).
+ * material links. 2026-11-17 (Nicole): no "Confirmed" chip — everything
+ * public is human-triaged (the shared visibility rule), so per-row trust
+ * badges would only imply doubt about rows without them. Direction is a
+ * labeled PAIR in plain English ("Tightens supply" / "Eases supply"), so
+ * each side defines the other without a tooltip; neutral rows get no
+ * chip. No numeric severity anywhere — public scope is bands and dates
+ * (A6).
  *
  * Material chips link to /intelligence/materials/{slug} — part of the
  * interlinking pass (every surface links onward).
@@ -36,17 +39,13 @@ export function SignalRow({ item }: { item: PublicEventItem }) {
     <div className="ih-signal-row">
       <div className="ih-signal-meta">
         <span className="ih-signal-date">{formatDate(item.event_date)}</span>
-        {item.verified ? (
-          <span
-            className="ih-signal-verified"
-            title="Confirmed by our analysts"
-          >
-            ✓ Confirmed
+        {item.direction === "restrictive" ? (
+          <span className="ih-signal-dir ih-signal-dir-restrictive">
+            Tightens supply
           </span>
-        ) : null}
-        {item.direction === "supportive" ? (
-          <span className="ih-signal-supportive" title="Supply-supportive development">
-            Supportive
+        ) : item.direction === "supportive" ? (
+          <span className="ih-signal-dir ih-signal-dir-supportive">
+            Eases supply
           </span>
         ) : null}
       </div>

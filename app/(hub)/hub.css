@@ -602,8 +602,13 @@
 .ih-signal-row:last-child { border-bottom: none; }
 .ih-signal-meta { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
 .ih-signal-date { font-size: 11.5px; font-weight: 600; color: var(--ink-muted); letter-spacing: 0.02em; }
-.ih-signal-verified { font-size: 10.5px; font-weight: 700; color: var(--wine-mid); letter-spacing: 0.04em; text-transform: uppercase; }
-.ih-signal-supportive { font-size: 10.5px; font-weight: 700; color: var(--ink-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+/* Direction pair (2026-11-17): plain-English labels, no tooltip needed.
+   Colors echo the band-chip text family: tightening reads warm/red,
+   easing reads green. The retired "Confirmed" chip is gone — everything
+   public is human-triaged, so a per-row badge would only imply doubt. */
+.ih-signal-dir { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.ih-signal-dir-restrictive { color: #9F1239; }
+.ih-signal-dir-supportive { color: #1F6B43; }
 .ih-signal-title { font-family: var(--font-display); font-size: 15.5px; font-weight: 600; line-height: 1.35; color: var(--ink); }
 .ih-signal-link { color: inherit; text-decoration: none; }
 .ih-signal-link:hover { color: var(--wine-mid); }
@@ -667,3 +672,14 @@
    ih-matlist bar rows are retired from this page (classes kept for the
    sidebar, which still draws small bars). */
 .ih-matlist-chip { text-transform: none; }
+
+/* ============ Page shell fill (2026-11-18) ============
+   The footer's 56px top margin showed the body's white on pages without
+   a .ih-page wrapper (the feed), and short pages left white below the
+   footer. The root is now a full-height stone column and main grows to
+   fill — no white band can appear between content and footer on any
+   hub page. */
+.ih-root { display: flex; flex-direction: column; min-height: 100vh; background: var(--stone); }
+.ih-root > main, .ih-main { flex: 1; }
+.ih-page { display: flex; flex-direction: column; flex: 1; }
+.ih-page > main { flex: 1; }

@@ -34,9 +34,12 @@ interface NavProps {
   /** Feed-only content-type tabs. Both must be provided to render the row. */
   activeTab?: TabLabel;
   onTab?: (tab: TabLabel) => void;
+  /** Which tabs to render (2026-11-18: the feed hides tabs with no
+   *  content — an empty tab shouldn't be clickable). Defaults to all. */
+  tabs?: TabLabel[];
 }
 
-export function Nav({ section = "intelligence", activeTab, onTab }: NavProps) {
+export function Nav({ section = "intelligence", activeTab, onTab, tabs }: NavProps) {
   return (
     <header className="ih-nav-wrap">
       <div className="ih-gradient-bar" />
@@ -67,7 +70,7 @@ export function Nav({ section = "intelligence", activeTab, onTab }: NavProps) {
       {activeTab !== undefined && onTab !== undefined ? (
         <div className="ih-tabs">
           <div className="ih-tabs-inner">
-            {TABS.map((t) => (
+            {(tabs ?? TABS).map((t) => (
               <button
                 key={t}
                 className={"ih-tab" + (t === activeTab ? " is-active" : "")}

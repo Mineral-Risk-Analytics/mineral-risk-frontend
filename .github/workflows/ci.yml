@@ -1,0 +1,41 @@
+# Frontend CI (2026-11-23) — the PR merge gate.
+#
+# Type-check + lint on every PR and push to main. Make "typecheck" a
+# REQUIRED status check in branch protection. The E2E smoke suite runs
+# on its own schedule (e2e.yml), not here — it targets a deployed site,
+# so it shouldn't block merges on dev-environment hiccups.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: typecheck + lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable pnpm (version pinned by packageManager)
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint

@@ -683,3 +683,30 @@
 .ih-root > main, .ih-main { flex: 1; }
 .ih-page { display: flex; flex-direction: column; flex: 1; }
 .ih-page > main { flex: 1; }
+
+/* ============ Mobile nav + phone-width pass (2026-11-23) ============
+   Found by the e2e smoke suite: .ih-nav-links (section links + Subscribe)
+   is ~451px wide and forced every hub page to 587px on a 375px phone —
+   a 212px horizontal overflow. At phone widths the nav wraps: brand on
+   the first row, links on a full-width second row that scrolls sideways
+   WITHIN itself (never widening the page). Tabs get the same treatment
+   so five tabs can't overflow once Report/News content exists. */
+@media (max-width: 700px) {
+  .ih-nav { flex-wrap: wrap; padding: 10px 16px; row-gap: 2px; }
+  .ih-nav-links {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+  }
+  .ih-nav-links::-webkit-scrollbar { display: none; }
+  .ih-nav-links a, .ih-btn-primary { white-space: nowrap; }
+  .ih-tabs-inner { overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
+  .ih-tabs-inner::-webkit-scrollbar { display: none; }
+  .ih-tab { white-space: nowrap; }
+  .ih-content { padding: 20px 16px 0; }
+  .ih-entity-main { padding: 16px 16px 24px; }
+}

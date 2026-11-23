@@ -9,7 +9,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "types:generate": "openapi-typescript http://localhost:8000/openapi.json -o lib/types/api.ts",
-    "types:generate:file": "openapi-typescript ../battery-data-intelligence-engine/openapi.json -o lib/types/api.ts"
+    "types:generate:file": "openapi-typescript ../battery-data-intelligence-engine/openapi.json -o lib/types/api.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.2.3",
@@ -53,7 +55,8 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@playwright/test": "^1.49.1"
   },
   "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48"
 }

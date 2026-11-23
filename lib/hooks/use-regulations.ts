@@ -34,6 +34,8 @@ export function useRegulations(
     queryKey: regulationQueryKeys.list(params),
     queryFn: () => getRegulations(client, params),
     placeholderData: (prev) => prev,
+    // Regulations change on workbook loads, not during a session.
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 }
@@ -44,5 +46,6 @@ export function useRegulation(id: number | string | null | undefined) {
     queryKey: regulationQueryKeys.detail(id ?? ""),
     queryFn: () => getRegulation(client, id as number | string),
     enabled: id != null && id !== "",
+    staleTime: 5 * 60 * 1000,
   });
 }

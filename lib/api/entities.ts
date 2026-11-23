@@ -244,3 +244,118 @@ export function getPublicRegulation(regulationKey: string) {
     `${BASE}/regulations/${encodeURIComponent(regulationKey)}`,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Materials — public profiles (content-site unit Piece C, 2026-10-24)
+// ---------------------------------------------------------------------------
+
+export interface PublicShareOut {
+  code: string;
+  name: string | null;
+  share: number; // raw fraction [0,1] — SOURCE data, not a score
+}
+
+export interface PublicStageSharesOut {
+  stage: string;
+  reference_year: number;
+  is_driving: boolean;
+  sources: string[];
+  shares: PublicShareOut[];
+}
+
+export interface PublicMaterialRegulationOut {
+  regulation_key: string;
+  title: string | null;
+  geography: string | null;
+  status: string | null;
+  pillar: string | null;
+}
+
+export interface PublicMaterialListItem {
+  slug: string;
+  name: string;
+  band: RiskBandOut;
+  /** Stage that set the rating ("refined"…), from stored rescore
+   *  diagnostics — the browse row's secondary fact (2026-11-12). */
+  driving_stage: string | null;
+}
+
+export interface PublicMaterialProfile {
+  slug: string;
+  name: string;
+  band: RiskBandOut;
+  as_of_date: string | null;
+  stages: PublicStageSharesOut[];
+  regulations: PublicMaterialRegulationOut[];
+  linked_posts: LinkedPostOut[];
+  linked_event_count: number;
+}
+
+export async function listPublicMaterials(): Promise<PublicMaterialListItem[]> {
+  const res = await fetch(`${BASE}/materials`);
+  if (!res.ok) throw new Error(String(res.status));
+  return res.json();
+}
+
+export async function getPublicMaterial(slug: string): Promise<PublicMaterialProfile> {
+  const res = await fetch(`${BASE}/materials/${encodeURIComponent(slug)}`);
+  if (!res.ok) throw new Error(String(res.status));
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Live signals — the public triaged-event feed (C3/C4)
+// ---------------------------------------------------------------------------
+
+export interface PublicEventGeo {
+  code: string;
+  name: string | null;
+}
+
+export interface PublicEventItem {
+  id: number;
+  title: string;
+  summary: string | null;
+  event_date: string | null;
+  event_type: string | null;
+  event_subtype: string | null;
+  direction: string | null;
+  verified: boolean;
+  source_name: string | null;
+  source_url: string | null;
+  materials: string[];
+  geographies: PublicEventGeo[];
+}
+
+export interface PublicEventsPage {
+  data: PublicEventItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function listPublicEvents(params: {
+  material?: string;
+  /** Profile slug — same direct-only filter as `material`, usable
+   *  before the profile fetch returns, so pages can load signals in
+   *  parallel (2026-11-12). */
+  material_slug?: string;
+  verified_only?: boolean;
+  page?: number;
+  limit?: number;
+} = {}): Promise<PublicEventsPage> {
+  const q = new URLSearchParams();
+  if (params.material) q.set("material", params.material);
+  if (params.material_slug) q.set("material_slug", params.material_slug);
+  if (params.verified_only) q.set("verified_only", "true");
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  const res = await fetch(`${BASE}/events${q.size ? `?${q}` : ""}`);
+  if (!res.ok) throw new Error(String(res.status));
+  return res.json();
+}
+
+/** Mirror of the backend's slug derivation (_material_slug). */
+export function materialSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}

@@ -10,7 +10,19 @@
 
 /* ============================================================
    Token definitions
+
+   Declared on :root as well as .mra-platform. Radix renders dialogs,
+   side sheets, tooltips and dropdown menus through a portal into
+   <body>, i.e. OUTSIDE the .mra-platform wrapper — so any var(--p-*)
+   used inside those surfaces resolved to nothing, and properties like
+   `border: 1px solid var(--p-border)` silently dropped to none.
+   These are pure custom-property declarations: an unreferenced token
+   has no rendering effect, so hoisting them to :root is additive.
+   The shadcn --primary/--ring overrides are deliberately NOT hoisted
+   (see the separate rule below) — those would repaint the public
+   Intelligence Hub and the auth pages.
    ============================================================ */
+:root,
 .mra-platform {
   /* --- Cool slate palette --- */
   --p-slate-950: #0B1220;
@@ -94,8 +106,12 @@
   /* --- Layout --- */
   --p-nav-h: 56px;
   --p-sidebar-w: 240px;
+}
 
-  /* Override shadcn primary/ring to terracotta within platform shell */
+/* Override shadcn primary/ring to terracotta within the platform shell.
+   Scoped to .mra-platform on purpose — hoisting these to :root would
+   recolour the public Intelligence Hub and the Clerk auth pages too. */
+.mra-platform {
   --primary: 17 56% 51%;
   --ring: 17 56% 51%;
 }

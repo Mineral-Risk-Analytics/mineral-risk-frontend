@@ -83,7 +83,8 @@ export default function MaterialsListPage() {
       },
       {
         id: "risk",
-        header: () => <div className="text-right">Risk</div>,
+        // 5.0: the published number is the concentration pillar alone.
+        header: () => <div className="text-right">Structural Risk</div>,
         cell: ({ row }) => (
           <div className="flex justify-end">
             <ScoreChip

@@ -12,8 +12,10 @@ import * as React from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApiClient } from "@/lib/hooks/use-api-client";
+import { useMaterials } from "@/lib/hooks/use-materials";
 import {
   getPostById,
+  getImageUploadUrl,
   getPdfUploadUrl,
   updatePost,
   publishPost,
@@ -230,6 +232,7 @@ export default function AdminInsightEditorPage() {
   const [author, setAuthor] = React.useState<string | null>(null);
   const [readTime, setReadTime] = React.useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
+  const [heroImageUrl, setHeroImageUrl] = React.useState<string | null>(null);
   const [slugValue, setSlugValue] = React.useState<string | null>(null);
   // Article (written) date, "YYYY-MM-DD"; "" = unset (publish stamps now).
   const [articleDate, setArticleDate] = React.useState<string | null>(null);
@@ -252,10 +255,44 @@ export default function AdminInsightEditorPage() {
         post.data.read_time_minutes != null ? String(post.data.read_time_minutes) : "",
       );
       setPdfUrl(post.data.pdf_url ?? "");
+      setHeroImageUrl(post.data.hero_image_url ?? "");
       setSlugValue(post.data.slug);
       setArticleDate(post.data.published_at ? post.data.published_at.slice(0, 10) : "");
     }
   }, [post.data, body]);
+
+  // Legacy material-tag validator (2026-11-23). The FacetPicker is
+  // pick-only, so NEW tags always match the register — but posts tagged
+  // before it existed (pre-2026-07-22) carry symbols ("LI") or other
+  // non-canonical strings, and those silently break ALL linking: the
+  // article's Related Signals lookup, the material page's Linked
+  // intelligence, and the chip's /materials/{slug} target. Flag them
+  // against the register with a one-click replacement; never blocks Save.
+  const materialRegister = useMaterials({ limit: 100 });
+  const invalidMaterials = React.useMemo(() => {
+    const rows = materialRegister.data?.data;
+    if (!rows?.length) return [];
+    const byName = new Set(rows.map((m) => m.canonical_name));
+    return materialList
+      .filter((v) => !byName.has(v))
+      .map((v) => {
+        const q = v.trim().toLowerCase();
+        const match =
+          rows.find((m) => (m.symbol_or_code ?? "").toLowerCase() === q) ??
+          rows.find((m) => m.canonical_name.toLowerCase() === q) ??
+          rows
+            .filter((m) => m.canonical_name.toLowerCase().startsWith(q))
+            .sort((a, b) => a.canonical_name.length - b.canonical_name.length)[0];
+        return { value: v, suggestion: match?.canonical_name ?? null };
+      });
+  }, [materialList, materialRegister.data]);
+  function replaceMaterial(from: string, to: string) {
+    // Map then dedupe — replacing "LI" with "Lithium" when "Lithium" is
+    // already tagged must not create a duplicate chip.
+    setMaterials(
+      Array.from(new Set(materialList.map((m) => (m === from ? to : m)))),
+    );
+  }
 
   const dirty =
     post.data != null &&
@@ -272,6 +309,7 @@ export default function AdminInsightEditorPage() {
       readTime !==
         (post.data.read_time_minutes != null ? String(post.data.read_time_minutes) : "") ||
       pdfUrl !== (post.data.pdf_url ?? "") ||
+      heroImageUrl !== (post.data.hero_image_url ?? "") ||
       articleDate !==
         (post.data.published_at ? post.data.published_at.slice(0, 10) : "") ||
       (slugValue !== null && slugValue !== post.data.slug));
@@ -294,6 +332,7 @@ export default function AdminInsightEditorPage() {
         author: author || null,
         read_time_minutes: readTime?.trim() ? Number(readTime) : null,
         pdf_url: pdfUrl?.trim() ? pdfUrl.trim() : null,
+        hero_image_url: heroImageUrl?.trim() ? heroImageUrl.trim() : null,
         // Noon UTC keeps the calendar date stable across viewer timezones.
         published_at: articleDate?.trim() ? `${articleDate}T12:00:00Z` : null,
         // Only send slug when actually changed — avoids spurious 409 paths.
@@ -349,6 +388,28 @@ export default function AdminInsightEditorPage() {
       );
     } finally {
       setPdfUploading(false);
+    }
+  }
+  const [heroUploading, setHeroUploading] = React.useState(false);
+  async function handleHeroUpload(file: File) {
+    setHeroUploading(true);
+    setActionError(null);
+    try {
+      const t = await getImageUploadUrl(client, id, file.name);
+      const res = await fetch(t.upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": t.content_type },
+        body: file,
+      });
+      if (!res.ok) throw new Error(`R2 rejected the upload (HTTP ${res.status})`);
+      // Fills the field only — Save persists it, same as any other edit.
+      setHeroImageUrl(t.public_url);
+    } catch (e) {
+      setActionError(
+        `Image upload failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      setHeroUploading(false);
     }
   }
   const archive = useMutation({
@@ -479,6 +540,28 @@ export default function AdminInsightEditorPage() {
                   fetcher={suggestMaterials}
                   placeholder="Type a material — e.g. Cobalt, Li"
                 />
+                {invalidMaterials.length ? (
+                  <div className="mt-1 space-y-0.5 text-xs text-amber-700 dark:text-amber-500">
+                    {invalidMaterials.map((bad) => (
+                      <div key={bad.value}>
+                        &ldquo;{bad.value}&rdquo; isn&rsquo;t a register
+                        material — it won&rsquo;t link to a material page,
+                        signals, or the feed filter.{" "}
+                        {bad.suggestion ? (
+                          <button
+                            type="button"
+                            className="font-medium underline"
+                            onClick={() => replaceMaterial(bad.value, bad.suggestion!)}
+                          >
+                            Replace with &ldquo;{bad.suggestion}&rdquo;
+                          </button>
+                        ) : (
+                          <>Remove it or pick the right name above.</>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <div className="col-span-2 text-xs text-muted-foreground">
                 Geographies (pick a country — stored as ISO2)
@@ -567,6 +650,50 @@ export default function AdminInsightEditorPage() {
                   className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm text-foreground"
                 />
               </label>
+              <div className="col-span-2 text-xs text-muted-foreground">
+                Hero image
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    value={heroImageUrl ?? ""}
+                    onChange={(e) => setHeroImageUrl(e.target.value)}
+                    placeholder="https://…/cover.jpg — or upload →"
+                    className="w-full rounded-md border bg-background px-2 py-1.5 text-sm text-foreground"
+                  />
+                  <input
+                    id="hero-file-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleHeroUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={heroUploading}
+                    onClick={() =>
+                      document.getElementById("hero-file-input")?.click()
+                    }
+                  >
+                    {heroUploading ? "Uploading…" : "Upload image"}
+                  </Button>
+                </div>
+                <span className="mt-1 block">
+                  Shown at the top of the public article (jpg/png/webp).
+                  Upload fills the URL from R2 — remember to Save.
+                </span>
+                {heroImageUrl?.trim() ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={heroImageUrl.trim()}
+                    alt="Hero preview"
+                    className="mt-2 max-h-28 rounded-md border object-cover"
+                  />
+                ) : null}
+              </div>
               {contentType === "report" ? (
                 <div className="col-span-2 text-xs text-muted-foreground">
                   Report PDF

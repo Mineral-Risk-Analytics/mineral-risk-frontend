@@ -15,11 +15,12 @@ import { Nav } from "@/components/hub/Nav";
 import { Breadcrumb } from "@/components/hub/entity/Breadcrumb";
 import { EntityHeader } from "@/components/hub/entity/EntityHeader";
 import { Section } from "@/components/hub/entity/Section";
-import { LinkedPostsSection } from "@/components/hub/entity/LinkedPosts";
+import { LinkedEventsSection, LinkedPostsSection } from "@/components/hub/entity/LinkedPosts";
 import { ScopeChips } from "@/components/hub/entity/ScopeChips";
 import { TimelineStrip } from "@/components/hub/entity/TimelineStrip";
 import { IntroBlocks } from "@/components/hub/entity/IntroBlocks";
 import { Footer } from "@/components/hub/Footer";
+import { SkeletonProfile } from "@/components/hub/Skeleton";
 import { getPublicRegulation, type PublicRegulationDetail } from "@/lib/api/entities";
 import { SubscribeBox } from "@/components/hub/SubscribeBox";
 
@@ -52,13 +53,15 @@ export default function RegulationDetailPage() {
       <div className="ih-page">
         <Nav section="regulations" />
         <main className="ih-entity-main">
-          <div className="ih-browse-meta">
-            {state === "loading"
-              ? "Loading…"
-              : state === "missing"
+          {state === "loading" ? (
+            <SkeletonProfile />
+          ) : (
+            <div className="ih-browse-meta">
+              {state === "missing"
                 ? "Regulation not found."
                 : "Couldn't load this regulation — try again shortly."}
-          </div>
+            </div>
+          )}
         </main>
         <Footer />
       </div>
@@ -177,6 +180,7 @@ export default function RegulationDetailPage() {
         </div>
 
         <LinkedPostsSection posts={reg.linked_posts} />
+                <LinkedEventsSection events={reg.linked_events} />
       </main>
       <Footer />
     </div>

@@ -595,3 +595,118 @@
   .ih-article-h1 { font-size: 24px; }
   .ih-article-h2 { font-size: 20px; }
 }
+
+/* ── Live signals (C3/C4, 2026-10-24) — event rows on public surfaces ── */
+.ih-signal-list { display: flex; flex-direction: column; gap: 14px; }
+.ih-signal-row { padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.ih-signal-row:last-child { border-bottom: none; }
+.ih-signal-meta { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.ih-signal-date { font-size: 11.5px; font-weight: 600; color: var(--ink-muted); letter-spacing: 0.02em; }
+/* Direction pair (2026-11-17): plain-English labels, no tooltip needed.
+   Colors echo the band-chip text family: tightening reads warm/red,
+   easing reads green. The retired "Confirmed" chip is gone — everything
+   public is human-triaged, so a per-row badge would only imply doubt. */
+.ih-signal-dir { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.ih-signal-dir-restrictive { color: #9F1239; }
+.ih-signal-dir-supportive { color: #1F6B43; }
+.ih-signal-title { font-family: var(--font-display); font-size: 15.5px; font-weight: 600; line-height: 1.35; color: var(--ink); }
+.ih-signal-link { color: inherit; text-decoration: none; }
+.ih-signal-link:hover { color: var(--wine-mid); }
+.ih-signal-summary { font-size: 13px; line-height: 1.55; color: var(--ink-muted); margin: 4px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ih-signal-tags { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.ih-signal-mat { text-decoration: none; }
+.ih-signal-mat:hover { color: var(--wine-mid); }
+.ih-signal-geo, .ih-signal-src { font-size: 11px; color: var(--ink-muted); }
+.ih-signal-src::before { content: "·"; margin-right: 8px; color: var(--rule); }
+
+/* ── Materials index + profile (Piece C) ── */
+.ih-matlist { margin-top: 20px; }
+.ih-matlist-row { display: grid; grid-template-columns: 180px 1fr 44px 20px; align-items: center; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--rule); text-decoration: none; }
+.ih-matlist-row:hover .ih-matlist-name { color: var(--wine-mid); }
+.ih-matlist-name { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--ink); }
+.ih-matlist-arrow { font-size: 13px; color: var(--ink-muted); }
+.ih-mat-name-link { text-decoration: none; }
+.ih-mat-name-link:hover { color: var(--wine-mid); }
+.ih-stage-block { margin: 0 0 18px; }
+.ih-stage-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.ih-stage-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.ih-stage-driving { margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--terracotta); }
+.ih-stage-src { font-size: 11px; color: var(--ink-muted); }
+.ih-share-fill { background: var(--wine-mid); }
+.ih-share-pct { color: var(--ink-muted); }
+.ih-matreg-list { display: flex; flex-direction: column; }
+.ih-matreg-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--rule); text-decoration: none; }
+.ih-matreg-row:last-child { border-bottom: none; }
+.ih-matreg-row:hover .ih-matreg-title { color: var(--wine-mid); }
+.ih-matreg-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.ih-matreg-meta { font-size: 11.5px; color: var(--ink-muted); white-space: nowrap; }
+
+/* Linked events on entity pages (flag flipped 2026-10-24) */
+.ih-linkedev-list { display: flex; flex-direction: column; }
+.ih-linkedev-row { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.ih-linkedev-row:last-child { border-bottom: none; }
+.ih-linkedev-date { font-size: 11px; font-weight: 600; color: var(--ink-muted); white-space: nowrap; min-width: 86px; }
+.ih-linkedev-title { font-size: 13.5px; color: var(--ink); line-height: 1.4; }
+.ih-linkedev-type { font-size: 10.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+
+/* ============ Loading skeletons (2026-11-12) ============
+   Shimmer placeholders replacing every "Loading…" text state. Stone-mid
+   base with a cream sweep; shapes composed per surface in
+   components/hub/Skeleton.tsx. prefers-reduced-motion gets a static tint. */
+.ih-skel { display: block; background: var(--stone-mid); border-radius: var(--radius-xs); position: relative; overflow: hidden; }
+.ih-skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 253, 248, 0.85), transparent); animation: ih-shimmer 1.4s infinite; }
+@keyframes ih-shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .ih-skel::after { animation: none; } }
+.ih-skel-list { display: flex; flex-direction: column; }
+.ih-skel-listrow { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 4px; border-bottom: 1px solid var(--rule); }
+.ih-skel-listmain { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ih-skel-facts { display: flex; gap: 10px; }
+.ih-skel-feedrow { display: flex; flex-direction: column; gap: 9px; padding: 16px 0; border-bottom: 1px solid var(--rule); }
+.ih-skel-article { padding: 8px 0 28px; }
+.ih-skel-profile { padding: 8px 0 28px; }
+.ih-skel-section { margin-top: 34px; display: flex; flex-direction: column; gap: 6px; }
+
+/* ============ Materials browse index (2026-11-12 redesign) ============
+   Mockup A: companies-page browse rows — risk as a word-chip in the facts
+   line (ih-geo-chip-* family), no bars, no numbers. The old full-width
+   ih-matlist bar rows are retired from this page (classes kept for the
+   sidebar, which still draws small bars). */
+.ih-matlist-chip { text-transform: none; }
+
+/* ============ Page shell fill (2026-11-18) ============
+   The footer's 56px top margin showed the body's white on pages without
+   a .ih-page wrapper (the feed), and short pages left white below the
+   footer. The root is now a full-height stone column and main grows to
+   fill — no white band can appear between content and footer on any
+   hub page. */
+.ih-root { display: flex; flex-direction: column; min-height: 100vh; background: var(--stone); }
+.ih-root > main, .ih-main { flex: 1; }
+.ih-page { display: flex; flex-direction: column; flex: 1; }
+.ih-page > main { flex: 1; }
+
+/* ============ Mobile nav + phone-width pass (2026-11-23) ============
+   Found by the e2e smoke suite: .ih-nav-links (section links + Subscribe)
+   is ~451px wide and forced every hub page to 587px on a 375px phone —
+   a 212px horizontal overflow. At phone widths the nav wraps: brand on
+   the first row, links on a full-width second row that scrolls sideways
+   WITHIN itself (never widening the page). Tabs get the same treatment
+   so five tabs can't overflow once Report/News content exists. */
+@media (max-width: 700px) {
+  .ih-nav { flex-wrap: wrap; padding: 10px 16px; row-gap: 2px; }
+  .ih-nav-links {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+  }
+  .ih-nav-links::-webkit-scrollbar { display: none; }
+  .ih-nav-links a, .ih-btn-primary { white-space: nowrap; }
+  .ih-tabs-inner { overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
+  .ih-tabs-inner::-webkit-scrollbar { display: none; }
+  .ih-tab { white-space: nowrap; }
+  .ih-content { padding: 20px 16px 0; }
+  .ih-entity-main { padding: 16px 16px 24px; }
+}

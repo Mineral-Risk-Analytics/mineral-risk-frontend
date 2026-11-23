@@ -56,3 +56,44 @@ export function LinkedPostsSection({ posts }: { posts: LinkedPostOut[] }) {
     </Section>
   );
 }
+
+/**
+ * Related events — the Phase-5 flag, flipped 2026-10-24: post-reset the
+ * corpus is repaired (correct dates, validated geographies), so entity
+ * pages now show the triaged events the API has carried all along.
+ * Severity is in the payload but deliberately NOT rendered — public
+ * scope is bands + dates (A6).
+ */
+import type { LinkedEventOut } from "@/lib/api/entities";
+
+function eventDate(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function LinkedEventsSection({ events }: { events: LinkedEventOut[] }) {
+  if (!events.length) return null;
+  return (
+    <Section
+      title="Related events"
+      aside={`${events.length} tracked`}
+      note="Trade measures and developments we track that touch this entity — shown for context, not folded into any rating."
+    >
+      <div className="ih-linkedev-list">
+        {events.map((e, i) => (
+          <div key={i} className="ih-linkedev-row">
+            <span className="ih-linkedev-date">{eventDate(e.event_date)}</span>
+            <span className="ih-linkedev-title">{e.title}</span>
+            <span className="ih-linkedev-type">
+              {(e.event_subtype ?? e.event_type).replaceAll("_", " ")}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}

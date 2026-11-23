@@ -2,12 +2,18 @@
 
 /**
  * Public company profile — /intelligence/companies/[slug].
- * Informative-first launch (2026-07-15): identity, supply chain, and
- * facility exposure only. Hidden until later phases: risk bands/scores,
- * linked intelligence (posts/events), methodology links, subscribe.
+ *
+ * Header comment refreshed 2026-09-24 — the 2026-07-15 "informative-first"
+ * note had drifted from reality. What the page ACTUALLY shows today:
+ * identity, supply chain, material-level global + per-location scores
+ * (added 2026-07-21/22), facility drawer, linked posts (restored
+ * 2026-07-22), subscribe, and a methodology link (wired 2026-09-24).
+ * Still hidden: the company-level band (`company.band` is fetched but not
+ * rendered) and linked events (Phase-5 flag).
  * The lede renders companies.public_intro and is omitted when unset.
  */
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Nav } from '@/components/hub/Nav'
@@ -16,7 +22,8 @@ import { EntityHeader } from '@/components/hub/entity/EntityHeader'
 import { Section } from '@/components/hub/entity/Section'
 import { ExposureRow } from '@/components/hub/entity/ExposureRow'
 import { GeoRow } from '@/components/hub/entity/GeoRow'
-import { LinkedPostsSection } from '@/components/hub/entity/LinkedPosts'
+import { LinkedEventsSection, LinkedPostsSection } from '@/components/hub/entity/LinkedPosts'
+import { SkeletonProfile } from '@/components/hub/Skeleton'
 import { SubscribeBox } from '@/components/hub/SubscribeBox'
 import { IntroBlocks } from '@/components/hub/entity/IntroBlocks'
 import { Footer } from '@/components/hub/Footer'
@@ -42,13 +49,15 @@ export default function CompanyProfilePage() {
             <div className='ih-page'>
                 <Nav section='companies' />
                 <main className='ih-entity-main'>
-                    <div className='ih-browse-meta'>
-                        {state === 'loading'
-                            ? 'Loading…'
-                            : state === 'missing'
-                              ? 'Company not found.'
-                              : "Couldn't load this company — try again shortly."}
-                    </div>
+                    {state === 'loading' ? (
+                        <SkeletonProfile />
+                    ) : (
+                        <div className='ih-browse-meta'>
+                            {state === 'missing'
+                                ? 'Company not found.'
+                                : "Couldn't load this company — try again shortly."}
+                        </div>
+                    )}
                 </main>
                 <Footer />
             </div>
@@ -122,8 +131,9 @@ export default function CompanyProfilePage() {
                                 Coverage is company-agnostic and regulatory-led. Scores reflect supply-chain exposure,
                                 not investment guidance.
                             </p>
-                            {/* TODO: point at a methodology page once one exists. */}
-                            <span className='ih-aside-link'>Methodology →</span>
+                            <Link href='/intelligence/methodology' className='ih-aside-link'>
+                                Methodology →
+                            </Link>
                         </div>
 
                         <SubscribeBox className='ih-aside-subscribe' />
@@ -131,6 +141,7 @@ export default function CompanyProfilePage() {
                 </div>
 
                 <LinkedPostsSection posts={company.linked_posts} />
+                <LinkedEventsSection events={company.linked_events} />
             </main>
             <Footer />
         </div>

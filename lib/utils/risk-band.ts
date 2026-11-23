@@ -1,22 +1,30 @@
 import type { RiskBand } from "@/lib/types";
 
 /**
- * Risk band thresholds (2026-07-20 recalibration vs SCORING_VERSION 4.1 /
- * rollup 1.2 — see risk_band_proposal_41.md for the derivation).
+ * Risk band thresholds (2026-08-11 recalibration for the CONCENTRATION-ONLY
+ * launch — Option B of docs/design/band_recalibration_proposal.md in the
+ * engine repo; sign-off Nicole 2026-08-11).
  *
  * MIRRORS app/services/scoring/bands.py — these two files are the SOLE
  * source of truth for risk tier coloring.  If you change one, change the
  * other in the same commit or the Materials page and the Overview page
  * will disagree about whether a score is HIGH or MOD.
  *
- *   0–24   LOW    green   (measured, diversified)
- *   30–49  MOD    amber   (real exposure, mitigated/diversified)
- *   50–64  HIGH   orange  (severe chokepoint on at least one stage)
- *   65–100 CRIT   red     (extreme concentration + weaponization exposure)
+ *   0–34   LOW    green   (measured, diversified)
+ *   35–59  MOD    amber   (real concentration exposure, mitigated)
+ *   60–89  HIGH   orange  (severe chokepoint on at least one stage)
+ *   90–100 CRIT   red     (binding chokepoint ~80%+ single-country —
+ *                          no meaningful alternative supply)
  *
- * 2026-07-26: recalibrated 25/45/60 → 30/50/65 for the 4.3 methodology
- * level shift (avg→max geopolitical + obligation soft-cap). Keep in
- * lockstep with app/services/scoring/bands.py on the engine.
+ * 2026-08-11: recalibrated 30/50/65 → 35/60/90. Stage-max concentration
+ * scores sit structurally higher than the retired five-pillar blend (one
+ * concentrated stage sets the number), so the old cuts read 8/10 launch
+ * materials CRIT. Against the 2026-08-10 distribution: launch = Iron Ore
+ * LOW · Copper MOD · Al/Phosphate/Li/Ni HIGH · Co/REE/NG/Mn CRIT.
+ * Boundary case recorded in the proposal: Cobalt 90.01 is CRIT by 0.01 —
+ * deliberate (its published score is understated by a stale battery-grade
+ * stage; the detail page banners it). Keep in lockstep with
+ * app/services/scoring/bands.py on the engine.
  *
  * Fixed absolute cuts (Verisk-style categories, not percentiles): a
  * material's band never changes because another material moved.
@@ -25,13 +33,13 @@ import type { RiskBand } from "@/lib/types";
  * For materials whose CONCENTRATION pillar is unscored (backend
  * `concentration_scored === false`), do not band at all — pass the flag
  * to ScoreChip/ScoreBadge so they render "Insufficient data" instead of
- * a false-green LOW (e.g. Germanium).
+ * a false-green LOW (e.g. Rhenium, Sodium).
  */
 export function scoreToBand(score: number | null | undefined): RiskBand | null {
   if (score == null || Number.isNaN(score)) return null;
-  if (score < 30) return "LOW";
-  if (score < 50) return "MOD";
-  if (score < 65) return "HIGH";
+  if (score < 35) return "LOW";
+  if (score < 60) return "MOD";
+  if (score < 90) return "HIGH";
   return "CRIT";
 }
 

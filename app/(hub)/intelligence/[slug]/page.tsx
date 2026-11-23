@@ -27,6 +27,9 @@ import {
   type ContentType,
 } from "@/lib/api/hub-insights";
 import { pillarInfo } from "@/components/hub/pillars";
+import { SignalList } from "@/components/hub/SignalList";
+import { SkeletonArticle } from "@/components/hub/Skeleton";
+import { listPublicEvents, type PublicEventItem } from "@/lib/api/entities";
 
 const TYPE_LABEL: Record<ContentType, string> = {
   analysis: "Analysis",
@@ -51,12 +54,40 @@ export default function ArticlePage() {
     "loading",
   );
 
+  // Related signals: automatic material-tag association (2026-10-06
+  // interlinking decision) — recent triaged events sharing this article's
+  // materials. Self-maintaining: triage an event and it appears under
+  // every relevant article; no curation required.
+  const [signals, setSignals] = useState<PublicEventItem[]>([]);
+
   useEffect(() => {
     if (!params?.slug) return;
     getPublicPost(params.slug)
       .then((p) => {
         setPost(p);
         setState("ready");
+        const mats = (p.materials ?? []).slice(0, 2);
+        if (!mats.length) return;
+        Promise.all(
+          mats.map((m) => listPublicEvents({ material: m, limit: 4 })),
+        )
+          .then((pages) => {
+            const seen = new Set<number>();
+            const merged: PublicEventItem[] = [];
+            for (const pg of pages) {
+              for (const ev of pg.data) {
+                if (!seen.has(ev.id)) {
+                  seen.add(ev.id);
+                  merged.push(ev);
+                }
+              }
+            }
+            merged.sort((a, b) =>
+              (b.event_date ?? "").localeCompare(a.event_date ?? ""),
+            );
+            setSignals(merged.slice(0, 6));
+          })
+          .catch(() => setSignals([]));
       })
       .catch((e: Error) => setState(e.message === "404" ? "missing" : "error"));
   }, [params?.slug]);
@@ -66,13 +97,15 @@ export default function ArticlePage() {
       <div className="ih-page">
         <Nav section="intelligence" />
         <main className="ih-entity-main">
-          <div className="ih-browse-meta">
-            {state === "loading"
-              ? "Loading…"
-              : state === "missing"
+          {state === "loading" ? (
+            <SkeletonArticle />
+          ) : (
+            <div className="ih-browse-meta">
+              {state === "missing"
                 ? "Article not found."
                 : "Couldn't load this article — try again shortly."}
-          </div>
+            </div>
+          )}
         </main>
         <Footer />
       </div>
@@ -208,6 +241,18 @@ export default function ArticlePage() {
             </Link>
           </footer>
         </article>
+
+        {signals.length ? (
+          <section className="ih-article" style={{ marginTop: 28 }}>
+            <div className="ih-section-head">
+              <h2 className="ih-section-title">Related signals</h2>
+              <span className="ih-section-aside">
+                tracked events for this article&rsquo;s materials
+              </span>
+            </div>
+            <SignalList items={signals} />
+          </section>
+        ) : null}
       </main>
       <Footer />
     </div>

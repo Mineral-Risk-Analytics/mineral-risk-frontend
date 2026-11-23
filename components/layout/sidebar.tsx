@@ -13,6 +13,7 @@ import {
   FlaskConical,
   LayoutDashboard,
   Layers,
+  PieChart,
   Play,
   Scale,
   type LucideIcon,
@@ -34,6 +35,7 @@ const ICONS = {
   FlaskConical,
   LayoutDashboard,
   Layers,
+  PieChart,
   Play,
   Scale,
 } as const;
@@ -68,10 +70,16 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Intelligence",
     items: [
+      // Restored 2026-08-05: this link went live with the triage build, then
+      // an Aug 2 delivery committed a stale copy of this file and silently
+      // re-commented it. Live is the intended state.
+      { href: "/data/risk-events", label: "Risk Events", icon: ICONS.AlertTriangle },
       { href: "/data/regulations", label: "Regulations", icon: ICONS.Scale },
+      // Phase 3b transparency surface + the Workstream A freshness
+      // instrument (concentration-first plan) — data-derived, no triage.
+      { href: "/data/supply-concentration", label: "Supply Concentration", icon: ICONS.PieChart },
       // Other intelligence pages remain commented until they ship:
       // { href: "/data/market-scores", label: "Market Scores", icon: ICONS.BarChart3 },
-      // { href: "/data/risk-events",   label: "Risk Events",   icon: ICONS.AlertTriangle },
     ],
   },
   // {

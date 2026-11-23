@@ -12,6 +12,13 @@
  *   3. Date-ordered feed (published_at DESC).
  * Tab filtering is client-side over one fetch (feed ≤ ~50 posts at launch).
  * Public route — unauthenticated fetch, no Clerk dependency.
+ *
+ * Tab taxonomy (2026-11-18, Nicole): the LIVE SIGNALS feed lives under
+ * the SIGNAL tab (with any authored signal posts above it) — News is
+ * purely curated external coverage we author. Tabs with no content are
+ * hidden entirely: while loading only "All" shows, and populated tabs
+ * appear as data arrives. Signals are fetched eagerly (not lazily) since
+ * tab visibility depends on them.
  */
 
 import { useEffect, useState } from "react";
@@ -23,6 +30,9 @@ import { TypeLegend }     from "@/components/hub/TypeLegend";
 import { Footer }         from "@/components/hub/Footer";
 import type { TabLabel, FeedPost, FeaturedPost, ContentType } from "@/components/hub/types";
 import { pillarInfo } from "@/components/hub/pillars";
+import { SignalList } from "@/components/hub/SignalList";
+import { SkeletonFeedRows } from "@/components/hub/Skeleton";
+import { listPublicEvents, type PublicEventItem } from "@/lib/api/entities";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -115,6 +125,23 @@ export default function IntelligencePage() {
     };
   }, []);
 
+  // Live signals (C3) — shown under the SIGNAL tab. Fetched eagerly on
+  // mount: the Signal tab's visibility depends on whether any exist.
+  const [signals, setSignals] = useState<PublicEventItem[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    listPublicEvents({ limit: 15 })
+      .then((res) => {
+        if (live) setSignals(res.data);
+      })
+      .catch(() => {
+        if (live) setSignals([]); // quiet failure — the section is simply absent
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   // Featured = latest published report (API is date-ordered within types;
   // reports can't be pinned so the first report row is the latest one).
   const featuredApi = (posts ?? []).find((p) => p.content_type === "report");
@@ -127,9 +154,24 @@ export default function IntelligencePage() {
   const visibleFeed =
     activeTab === "All" ? feed : feed.filter((p) => p.type === activeTab);
 
+  // Hide tabs with nothing behind them (2026-11-18): "All" always shows;
+  // a content-type tab appears once a post of that type exists (featured
+  // report counts for Report); Signal also counts the live-signals feed.
+  // While loading, only "All" renders — populated tabs appear additively.
+  const hasType = (t: TabLabel) =>
+    feed.some((p) => p.type === t) || (t === "Report" && featured !== null);
+  const visibleTabs: TabLabel[] = ["All"];
+  if (posts !== null || error) {
+    for (const t of ["Analysis", "Signal", "Report", "News"] as TabLabel[]) {
+      if (hasType(t) || (t === "Signal" && (signals?.length ?? 0) > 0)) {
+        visibleTabs.push(t);
+      }
+    }
+  }
+
   return (
     <>
-      <Nav activeTab={activeTab} onTab={setActiveTab} />
+      <Nav activeTab={activeTab} onTab={setActiveTab} tabs={visibleTabs} />
 
       <main className="ih-main">
         <div className="ih-content">
@@ -147,6 +189,7 @@ export default function IntelligencePage() {
                 </section>
               ) : null}
 
+              {activeTab === "Signal" && visibleFeed.length === 0 ? null : (
               <section className="ih-feed-section">
                 <div className="ih-section-h">
                   <span className="ih-eyebrow">Recent Intelligence</span>
@@ -163,7 +206,7 @@ export default function IntelligencePage() {
                   ))}
 
                   {posts === null && !error ? (
-                    <p className="ih-feed-note">Loading intelligence feed…</p>
+                    <SkeletonFeedRows rows={5} />
                   ) : null}
                   {error ? (
                     <p className="ih-feed-note">
@@ -177,6 +220,19 @@ export default function IntelligencePage() {
                   ) : null}
                 </div>
               </section>
+              )}
+
+              {activeTab === "Signal" && signals && signals.length > 0 ? (
+                <section className="ih-feed-section">
+                  <div className="ih-section-h">
+                    <span className="ih-eyebrow">Live signals</span>
+                    <span className="ih-section-count">
+                      from our tracking engine
+                    </span>
+                  </div>
+                  <SignalList items={signals} />
+                </section>
+              ) : null}
             </div>
 
             {/* Sidebar */}

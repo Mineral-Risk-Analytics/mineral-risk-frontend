@@ -47,6 +47,7 @@ export interface InsightPostUpdate {
   summary?: string | null;
   body?: string | null;
   pdf_url?: string | null;
+  hero_image_url?: string | null;
   read_time_minutes?: number | null;
   author?: string | null;
   /** Article (written) date, ISO — null clears (next publish re-stamps). */
@@ -86,6 +87,22 @@ export async function getPdfUploadUrl(
     key: string;
     expires_in: number;
   }>(`${BASE}/posts/${id}/pdf-upload-url`, { filename });
+  return data;
+}
+
+export async function getImageUploadUrl(
+  client: ApiClient,
+  id: number,
+  filename: string,
+) {
+  const { data } = await client.post<{
+    upload_url: string;
+    public_url: string;
+    key: string;
+    expires_in: number;
+    /** The Content-Type the PUT must send — presign-bound server-side. */
+    content_type: string;
+  }>(`${BASE}/posts/${id}/image-upload-url`, { filename });
   return data;
 }
 
